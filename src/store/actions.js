@@ -1,25 +1,26 @@
 import api from '@/api/gitlab';
 
-export async function inspectGroup(ctx, rootGroupId) {
-	const fetchSubgroupsRecursively = async (group) => {
-		const subgroups = await api.Groups.subgroups(group.id);
-		const deepSubgroups = await Promise.all(subgroups.map(fetchSubgroupsRecursively));
+const fetchSubgroupsRecursively = async (group) => {
+	const subgroups = await api.Groups.subgroups(group.id);
+	const deepSubgroups = await Promise.all(subgroups.map(fetchSubgroupsRecursively));
 
-		return [group, ...deepSubgroups.flat(1)];
-	};
+	return [group, ...deepSubgroups.flat(1)];
+};
 
-	const makeMemberRelations = (resource, key, members) => members.map((member) => ({
-		[key]: resource,
-		member,
-		accessLevel: member.access_level
-	}));
+const makeMemberRelations = (resource, key, members) => members.map((member) => ({
+	[key]: resource,
+	member,
+	accessLevel: member.access_level
+}));
 
+export async function inspectGroup({commit}, groupId) {
 	try {
-		ctx.commit('setIsLoading', true);
+		commit('setIsLoading', true);
+		commit('setErrorMessage', null);
 
 		const groupMemberRelations = [];
 		const projectMemberRelations = [];
-		const rootGroup = await api.Groups.show(rootGroupId)
+		const rootGroup = await api.Groups.show(groupId)
 		const allGroups = await fetchSubgroupsRecursively(rootGroup);
 
 		await Promise.all(allGroups.map(async (group) => {
@@ -37,13 +38,13 @@ export async function inspectGroup(ctx, rootGroupId) {
 			}));
 		}));
 
-		ctx.commit('setGroupMemberRelations', groupMemberRelations);
-		ctx.commit('setProjectMemberRelations', projectMemberRelations);
-		ctx.commit('setErrorMessage', null);
-		ctx.commit('setHasData', true);
+		commit('setGroupMemberRelations', groupMemberRelations);
+		commit('setProjectMemberRelations', projectMemberRelations);
+		commit('setHasData', true);
 	} catch (e) {
-		ctx.commit('setErrorMessage', `Failed to inspect group.`);
+		commit('setErrorMessage', 'Failed to inspect group.');
+		commit('setHasData', false);
 	} finally {
-		ctx.commit('setIsLoading', false);
+		commit('setIsLoading', false);
 	}
 }
