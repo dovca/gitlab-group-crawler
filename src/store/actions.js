@@ -20,7 +20,7 @@ export async function inspectGroup({commit}, groupId) {
 
 		const groupMemberRelations = [];
 		const projectMemberRelations = [];
-		const rootGroup = await api.Groups.show(groupId)
+		const rootGroup = await api.Groups.show(groupId);
 		const allGroups = await fetchSubgroupsRecursively(rootGroup);
 
 		await Promise.all(allGroups.map(async (group) => {
